@@ -13,6 +13,11 @@ export function tgHoustonHome(): string {
 
 function resolveTdjson(): string {
   if (process.env.TG_TDJSON) return process.env.TG_TDJSON;
+  // The release tarball ships bin/tg and lib/libtdjson.dylib as siblings, so
+  // resolve relative to the compiled binary first — works from any install
+  // location and independently of where session data (TG_HOUSTON_HOME) lives.
+  const besideBinary = join(process.execPath, "..", "..", "lib", "libtdjson.dylib");
+  if (existsSync(besideBinary)) return besideBinary;
   const installed = join(tgHoustonHome(), "lib", "libtdjson.dylib");
   if (existsSync(installed)) return installed;
   // Dev fallback: running from the repo with node_modules present.
@@ -21,7 +26,7 @@ function resolveTdjson(): string {
     return getTdjson();
   } catch {
     throw new Error(
-      `libtdjson.dylib not found — expected at ${installed}. Reinstall tg-houston (re-extract the release tarball).`,
+      `libtdjson.dylib not found — expected at ${besideBinary}. Reinstall tg-houston (re-extract the release tarball).`,
     );
   }
 }
