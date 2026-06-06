@@ -13,6 +13,8 @@ Gives this agent full access to the user's personal Telegram account (not a bot)
 
 The binary path is always `~/.tg-houston/bin/tg`. Use it for every command below.
 
+**Platform support:** macOS on Apple Silicon only for now. On any other OS, stop and tell the user the skill does not support their platform yet.
+
 ## Step 0 — Bootstrap (run once, idempotent)
 
 If `~/.tg-houston/bin/tg` does not exist (check with `ls ~/.tg-houston/bin/tg`), install it with this single command:
@@ -27,7 +29,7 @@ If the checksum fails, stop and tell the user — do not install.
 
 Run `~/.tg-houston/bin/tg auth-status`. If `auth_state: ready`, relay the `user:` line and skip ahead.
 
-Otherwise tell the user: *"Dialogs will pop up for the login steps — your code and password go into the popup, never into this chat."* Then run ONE command:
+Otherwise, BEFORE running the command, warn the user so they don't miss the popup: *"A small macOS dialog is about to appear on your screen (it may open behind other windows — check your screen now). Your code and password go into the popup, never into this chat."* Then run ONE command:
 
 ```bash
 ~/.tg-houston/bin/tg login --ask

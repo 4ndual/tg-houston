@@ -1,22 +1,25 @@
-# Telegram for Houston
+# tg-houston — Telegram for your agents
 
-Give your [Houston](https://github.com/gethouston/houston) agents full access to **your real Telegram account** — read chats, search history, send messages and media, manage groups. Not a bot: your actual account, via [TDLib](https://core.telegram.org/tdlib).
+Give your AI agents full access to **your real Telegram account** — read chats, search history, send messages and media, manage groups. Not a bot: your actual account, via [TDLib](https://core.telegram.org/tdlib).
 
-Setup is fully conversational. Your agent installs the CLI itself and walks you through login — the code and your 2FA password go into **native macOS dialogs**, never into the chat.
+Setup is fully conversational. Your agent installs the CLI itself and walks you through login — the code and your 2FA password go into **native macOS dialogs**, never into the chat. Works with any agent that supports skills: Claude Code, Cursor, Codex, Windsurf, [Houston](https://github.com/gethouston/houston), and friends.
 
-## Install (any Houston user, ~1 minute)
+## Install (~1 minute)
 
-Tell any Houston agent:
+With the [skills CLI](https://www.skills.sh/):
+
+```bash
+npx skills add 4ndual/tg-houston
+```
+
+Or with any chat-based agent (e.g. Houston), just say:
 
 > Install the telegram skill from https://raw.githubusercontent.com/4ndual/tg-houston/main/SKILL.md and set up my Telegram.
 
-That's it. The agent will:
-1. Save the skill into its skills folder.
-2. Download and verify the `tg` CLI (to `~/.tg-houston/`).
-3. Pop native dialogs for your phone → login code → 2FA password.
-4. Send a hello to your Saved Messages to confirm.
-
-Alternatively, paste the contents of [SKILL.md](./SKILL.md) into Houston's skill editor yourself.
+Either way, on first use the agent will:
+1. Download and verify the `tg` CLI (to `~/.tg-houston/`).
+2. Pop native dialogs for your phone → login code → 2FA password.
+3. Send a hello to your Saved Messages to confirm.
 
 ## What your agent can do after that
 
@@ -35,8 +38,8 @@ Alternatively, paste the contents of [SKILL.md](./SKILL.md) into Houston's skill
 
 ## Requirements
 
-- macOS on Apple Silicon (darwin-arm64). Intel build not yet published.
-- A Houston agent with shell access (default).
+- macOS on Apple Silicon (darwin-arm64). Intel, Windows and Linux builds not yet published.
+- An agent with shell access.
 
 ## Build from source
 
