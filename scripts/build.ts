@@ -39,6 +39,17 @@ if (!existsSync(dylib)) {
 }
 copyFileSync(dylib, join(payload, "lib", "libtdjson.dylib"));
 
+// tdl's N-API addon is NOT embedded by `bun build --compile` (node-gyp-build
+// resolves it from the build machine's node_modules at runtime). Ship it next
+// to the binary: node-gyp-build falls back to prebuilds/ beside process.execPath.
+const addonSrc = join(root, "node_modules", "tdl", "prebuilds", "darwin-arm64", "tdl.node");
+if (!existsSync(addonSrc)) {
+  console.error(`tdl prebuilt addon not found at ${addonSrc}`);
+  process.exit(1);
+}
+mkdirSync(join(payload, "bin", "prebuilds", "darwin-arm64"), { recursive: true });
+copyFileSync(addonSrc, join(payload, "bin", "prebuilds", "darwin-arm64", "tdl.node"));
+
 // Fixed (unversioned) asset name so the GitHub `releases/latest/download/` URL
 // is stable; the version is embedded in the binary (`tg --version`).
 const tarballName = "tg-houston-darwin-arm64.tar.gz";
