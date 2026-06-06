@@ -1,0 +1,13 @@
+{
+  "name": "tg-houston",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun run scripts/build.ts"
+  },
+  "dependencies": {
+    "prebuilt-tdlib": "^0.1008064.0",
+    "tdl": "^8.0.0",
+    "zod": "^3.23.0"
+  }
+}
