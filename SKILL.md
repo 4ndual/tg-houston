@@ -1,6 +1,6 @@
 ---
 name: telegram
-description: Read and send Telegram messages as the user's real account — chats, history, search, media, groups. Includes one-time conversational login (phone + code pasted in chat). Self-installs its CLI on first use.
+description: Read and send Telegram messages as the user's real account — chats, history, search, media, groups. Includes one-time login via secure popup dialogs (codes and passwords never touch the chat). Self-installs its CLI on first use.
 version: 1
 tags: [telegram, messaging, cli]
 category: Messaging
@@ -27,15 +27,17 @@ If the checksum fails, stop and tell the user — do not install.
 
 Run `~/.tg-houston/bin/tg auth-status`. If `auth_state: ready`, relay the `user:` line and skip ahead.
 
-Otherwise tell the user: *"I'll open native macOS dialogs for the login steps — your code and password go into the popup, never into this chat."* Then loop:
+Otherwise tell the user: *"Dialogs will pop up for the login steps — your code and password go into the popup, never into this chat."* Then run ONE command:
 
 ```bash
 ~/.tg-houston/bin/tg login --ask
 ```
 
-Each run pops ONE dialog for whatever the next step is — phone number (with country code), then the Telegram login code, then the two-step verification password (**hidden input**, hint shown). Re-run `tg login --ask` until it prints `auth_state: ready`. Between runs, tell the user what's next (e.g. "Telegram just sent a code to your Telegram app — type it in the popup that's now on screen"). Codes expire in minutes — keep the pace.
+It drives the entire login by itself — a dialog for the phone number (with country code), then the Telegram login code, then the two-step verification password (**hidden input**, hint shown) — and prints `auth_state: ready` with the `user:` line when done. It can take several minutes while the user answers; let it run (in the background is fine) and keep the user informed ("answer the popups as they appear — the code arrives in your Telegram app, type it in the popup, not in Telegram"). Codes expire in minutes — keep the pace.
 
-**Fallback (dialog cancelled or `dialog_timeout`/`dialog_cancelled` errors):** drive it in chat instead — ask for each value and submit with:
+If it exits early with `dialog_timeout` or `dialog_cancelled`, ask the user to get ready and simply re-run `tg login --ask` — it resumes from whatever step was next.
+
+**Chat fallback — ONLY after `tg login --ask` failed twice:** ask for each value in chat and submit with:
 - `tg login --phone "+573001234567"`
 - `tg login --code 12345` — ⚠️ tell the user to paste the code **here**, NEVER type or forward it inside Telegram itself (Telegram invalidates codes sent through Telegram messages).
 - `tg login --password "their 2FA password"`

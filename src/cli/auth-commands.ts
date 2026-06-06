@@ -45,16 +45,23 @@ function describeState(state: AuthState, rawState: any): string[] {
   if (state === "wait_code") {
     lines.push(`code_sent_to: ${codeSentTo(rawState)}`);
     lines.push(
-      "note: ask the user to paste the code HERE in this chat. The user must NEVER type or forward the code inside Telegram itself — Telegram invalidates codes sent through Telegram messages.",
+      "next: tg login --ask (a dialog asks the user for the code — PREFERRED, keeps the code out of the chat)",
+    );
+    lines.push(
+      "fallback: tg login --code <code> — only if dialogs failed twice; the user must NEVER type or forward the code inside Telegram itself — Telegram invalidates codes sent through Telegram messages.",
     );
   }
   if (state === "wait_password") {
     const hint = rawState?.password_hint;
     lines.push(`password_hint: ${hint || "(none)"}`);
-    lines.push("next: tg login --password <2FA password>");
+    lines.push(
+      "next: tg login --ask (hidden-input dialog — PREFERRED, keeps the password out of the chat)",
+    );
+    lines.push("fallback: tg login --password <2FA password> — only if dialogs failed twice");
   }
   if (state === "wait_phone") {
-    lines.push("next: tg login --phone <+countrycode_number>");
+    lines.push("next: tg login --ask (a dialog asks the user — preferred)");
+    lines.push("fallback: tg login --phone <+countrycode_number>");
   }
   if (state === "wait_registration" || state === "wait_email" || state === "wait_email_code") {
     lines.push(
@@ -101,31 +108,58 @@ export async function login(args: string[]): Promise<string> {
   }
 
   return withOwnClient(async (client) => {
-    const raw = await getRawAuthState(client);
-    const state = mapAuthState(raw);
+    let raw = await getRawAuthState(client);
+    let state = mapAuthState(raw);
 
     if (state === "ready") {
       return [`auth_state: ready`, "note: already logged in", await userLine(client)].join("\n");
     }
 
     if (ask) {
-      // Pop a native macOS dialog for whichever credential the state machine
-      // needs next — codes and 2FA passwords never enter the chat transcript.
+      // Drive the WHOLE login with dialogs in one invocation: phone → code
+      // → 2FA password, looping the state machine until ready. The agent
+      // never sees intermediate states, so it can't be tempted to ask for
+      // codes in chat. Credentials never enter the chat transcript.
       const { askDialog } = await import("./native-prompt");
-      if (state === "wait_phone") {
-        phone = await askDialog("Enter your phone number with country code (e.g. +573001234567):");
-      } else if (state === "wait_code") {
-        code = await askDialog(
-          "Enter the Telegram login code (just sent to your Telegram app).\n\nDo NOT type it inside Telegram itself — that invalidates it.",
-        );
-      } else if (state === "wait_password") {
-        const hint = raw?.password_hint ? ` (hint: ${raw.password_hint})` : "";
-        password = await askDialog(`Enter your Telegram two-step verification password${hint}:`, {
-          hidden: true,
-        });
-      } else {
-        throw new Error(`wrong_state — auth_state: ${state}; nothing to ask for`);
+      const progress: string[] = [];
+      // ready + 3 credential steps + one resend; anything more is a loop bug.
+      for (let step = 0; step < 5; step++) {
+        if (state === "ready") {
+          progress.push("auth_state: ready");
+          progress.push(await userLine(client));
+          return progress.join("\n");
+        }
+        let request: any;
+        if (state === "wait_phone") {
+          const phone = await askDialog(
+            "Enter your phone number with country code (e.g. +573001234567):",
+          );
+          request = { _: "setAuthenticationPhoneNumber", phone_number: phone };
+        } else if (state === "wait_code") {
+          const sentTo = codeSentTo(raw);
+          const where = sentTo === "sms" ? "by SMS" : "in your Telegram app";
+          const dialogCode = await askDialog(
+            `Enter the Telegram login code (just sent ${where}).\n\nDo NOT type it inside Telegram itself — that invalidates it.`,
+          );
+          request = { _: "checkAuthenticationCode", code: dialogCode };
+        } else if (state === "wait_password") {
+          const hint = raw?.password_hint ? ` (hint: ${raw.password_hint})` : "";
+          const dialogPassword = await askDialog(
+            `Enter your Telegram two-step verification password${hint}:`,
+            { hidden: true },
+          );
+          request = { _: "checkAuthenticationPassword", password: dialogPassword };
+        } else {
+          throw new Error(
+            `wrong_state — auth_state: ${state}; cannot be completed by dialog. ` +
+              "Finish registering this account in the official Telegram app first, then retry.",
+          );
+        }
+        raw = await submitAndWaitNextState(client, request);
+        state = mapAuthState(raw);
+        progress.push(`step_ok: now ${state}`);
       }
+      throw new Error("too_many_steps — auth did not converge; run tg auth-status and retry");
     }
 
     let request: any;
